@@ -20,6 +20,7 @@ docker compose exec -T app pytest -q
 - 5. 分区判定：`/partitions`，`/api/partitions`。
 - 6. 访问对账：`/audit`，`/api/audit`。
 - 7. 审计归档：`/seals`，`/api/seals`。
+- 8. 增量复核：`/intervals`，`/api/intervals`。按业务日形成增量区间，收口产生唯一受理结论，晚到记录以新版本回看且旧版永久留存。
 
 ## 核心规则
 
@@ -37,6 +38,12 @@ docker compose exec -T app pytest -q
 输入列见 `docs/DATA-DICTIONARY.md`。项目包含dirty.csv、clean.csv、legacy.csv，统一走实际导入路径。上传限制4MB，拒绝不带时区的时间。业务键按字符串保留，Decimal参与计算，空值不会当零。
 
 `POST /api/runs` 接收sample或csv；`GET /api/runs`返回历史批次；`POST /api/runs/<id>/review`需要version与decision；`GET /api/runs/<id>/archive`返回唯一证据导出。
+
+## 增量区间复核
+
+每个业务日一个区间（`/intervals`）。受理窗口开放时，多个已采信批次按run_id并入同一版本，重复run_id直接复用不占位；`POST /api/intervals/<date>/close` 合并全部已受理批次，形成该区间**唯一受理结论**（锚定一个合并批次与输入摘要）。授权复查（review）与证据导出（evidence）始终锚定同一版本，不会出现同区间多结论。
+
+收口后才送达的晚到记录不允许改写旧版：再次受理会把旧版标记superseded并整体封存，开启v2等新版本回看；新版本收口后成为当前结论，旧版结论、复查意见与原始依据仍可按`?version=n`单独导出。同一区间重跑同内容幂等不新增结论；基于陈旧版本的复查返回409，失败事务不改写任何旧版数据。流程上选择**先关闭已完成部分、再回看晚到记录**，而不是无限等待落定。
 
 ## 范围
 

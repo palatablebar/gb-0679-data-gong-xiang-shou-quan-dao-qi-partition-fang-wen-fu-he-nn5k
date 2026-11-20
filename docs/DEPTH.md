@@ -13,6 +13,7 @@
 | M5 分区判定 | 查看并运行分区判定 | `/api/partitions` | `app/modules/m5_partitions/rules.py` | `tests/test_m5.py` |
 | M6 访问对账 | 查看并运行访问对账 | `/api/audit` | `app/modules/m6_audit/rules.py` | `tests/test_m6.py` |
 | M7 审计归档 | 查看并运行审计归档 | `/api/seals` | `app/modules/m7_seals/rules.py` | `tests/test_m7.py` |
+| M8 增量复核 | 受理日增量、收口、晚到回看与证据导出 | `/api/intervals` | `app/incremental/store.py` | `tests/test_incremental.py` |
 
 ## 陷阱登记
 
@@ -29,6 +30,10 @@
 | TRAP-07 | 上游结果空值 | 误报拒绝 | 隔离缺失 | `app/values.py` | `tests/test_m3.py::test_real_missing_decision_not_zero` |
 | TRAP-19 | 允许与拒绝重叠 | 后写覆盖 | 拒绝优先且排序证据 | `app/modules/m4_conflicts/rules.py` | `tests/test_m4.py::test_deny_priority_counterexample` |
 | TRAP-23 | 授权到期点 | 多放行一次 | 半开生效窗 | `app/modules/m3_grants/rules.py` | `tests/test_m3.py::test_expiry_endpoint_excluded` |
+| TRAP-30 | 补发重复占位 | 同批次重跑新增结论 | run_id幂等复用，同区间重跑不新增版本 | `app/incremental/store.py` | `tests/test_incremental.py::test_intake_idempotent_same_batch_not_duplicated` |
+| TRAP-31 | 晚到记录漏审 | 提前结束导致数据丢失 | 先收口出唯一结论，晚到记录开新版本回看，旧版封存不删 | `app/incremental/store.py` | `tests/test_incremental.py::test_late_record_after_close_makes_new_version_keeps_old` |
+| TRAP-32 | 同区间多结论 | 复查与导出各取一版 | 结论锚定单一合并批次，复查/证据导出共用版本快照 | `app/incremental/evidence.py` | `tests/test_incremental.py::test_close_creates_single_conclusion` |
+| TRAP-33 | 回看切换失败覆盖旧版 | 失败回滚不彻底 | 乐观锁409+事务，旧版结论与原始依据原样保留 | `app/incremental/store.py` | `tests/test_incremental.py::test_stale_review_409_and_failed_switch_keeps_old` |
 
 ## 对账规则
 

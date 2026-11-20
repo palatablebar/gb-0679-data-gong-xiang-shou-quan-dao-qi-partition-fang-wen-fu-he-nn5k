@@ -14,3 +14,5 @@ def register_pages(app):
     app.add_url_rule("/",view_func=lambda:page(4))
     for index,(slug,name) in enumerate(MODULES):
         app.add_url_rule("/"+slug,endpoint="page_"+slug,view_func=lambda index=index:page(index))
+    from app.incremental.web import register_interval_pages
+    register_interval_pages(app)
